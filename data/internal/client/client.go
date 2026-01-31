@@ -38,28 +38,47 @@ func NewGopherAIClientWithURL(baseURL, apiKey string) *GopherAIClient {
 	}
 }
 
-// SearchTwitter performs a Twitter search using the Gopher AI API
-func (c *GopherAIClient) SearchTwitter(query string, maxResults int) (*TwitterSearchResponse, error) {
-	request := TwitterSearchRequest{
-		Type: "twitter",
-		Arguments: TwitterSearchArguments{
-			Type:       "searchbyquery",
-			Query:      query,
-			MaxResults: maxResults,
-		},
-	}
+// TwitterSearchOptions holds optional parameters for Twitter search (time range, pagination)
+type TwitterSearchOptions struct {
+	MaxResults int    // Max 1000, default 1000
+	StartTime  string // ISO 8601 timestamp
+	EndTime    string // ISO 8601 timestamp
+	NextCursor string // Pagination cursor
+	Count      int    // Results per request (max 1000)
+}
 
-	// First, initiate the search and get UUID
-	initResp, err := c.initiateSearch("/search/live/twitter", request)
+// SearchTwitter performs a Twitter search (searchbyquery) using the Gopher AI API
+func (c *GopherAIClient) SearchTwitter(query string, maxResults int) (*TwitterSearchResponse, error) {
+	return c.SearchTwitterWithOptions(query, TwitterSearchOptions{MaxResults: maxResults})
+}
+
+// SearchTwitterWithOptions performs a Twitter search with optional time range and pagination
+func (c *GopherAIClient) SearchTwitterWithOptions(query string, opts TwitterSearchOptions) (*TwitterSearchResponse, error) {
+	args := TwitterArguments{
+		Type:       "searchbyquery",
+		Query:      query,
+		MaxResults: opts.MaxResults,
+		StartTime:  opts.StartTime,
+		EndTime:    opts.EndTime,
+		NextCursor: opts.NextCursor,
+		Count:      opts.Count,
+	}
+	if args.MaxResults == 0 {
+		args.MaxResults = 1000
+	}
+	return c.ExecuteTwitter(TwitterRequest{Type: "twitter", Arguments: args})
+}
+
+// ExecuteTwitter runs any Twitter API operation (searchbyquery, getbyid, getreplies, getretweeters, gettweets, getmedia, searchbyprofile, getprofilebyid, getfollowers, getfollowing, gettrends, getspace, searchbyfullarchive)
+func (c *GopherAIClient) ExecuteTwitter(request TwitterRequest) (*TwitterSearchResponse, error) {
+	request.Type = "twitter"
+	initResp, err := c.initiateSearch("/search/live", request)
 	if err != nil {
 		return nil, err
 	}
-
 	if initResp.Error != "" {
 		return nil, fmt.Errorf("API error: %s", initResp.Error)
 	}
-
-	// Poll for results
 	return c.pollForResults(initResp.UUID)
 }
 
@@ -123,7 +142,7 @@ func (c *GopherAIClient) pollForResults(uuid string) (*TwitterSearchResponse, er
 
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		// Create HTTP request for results
-		url := c.BaseURL + "/search/live/twitter/result/" + uuid
+		url := c.BaseURL + "/search/live/result/" + uuid
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)

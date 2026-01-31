@@ -1,17 +1,28 @@
 package client
 
-// TwitterSearchRequest represents the request structure for Twitter search API
-type TwitterSearchRequest struct {
-	Type      string                 `json:"type"`
-	Arguments TwitterSearchArguments `json:"arguments"`
+// TwitterRequest represents the request structure for Twitter API (job type "twitter")
+type TwitterRequest struct {
+	Type      string            `json:"type"`
+	Arguments TwitterArguments  `json:"arguments"`
 }
 
-// TwitterSearchArguments contains the specific arguments for Twitter search
-type TwitterSearchArguments struct {
-	Type       string `json:"type"`
-	Query      string `json:"query"`
-	MaxResults int    `json:"max_results"`
+// TwitterArguments contains the common parameters for Twitter API operations.
+// See docs: type (required), query, max_results (default 1000), count, next_cursor, start_time, end_time.
+type TwitterArguments struct {
+	Type       string `json:"type"`                   // Operation: searchbyquery, getbyid, getreplies, getretweeters, gettweets, getmedia, searchbyprofile, getprofilebyid, getfollowers, getfollowing, gettrends, getspace, searchbyfullarchive
+	Query      string `json:"query,omitempty"`         // Username (@user), tweet ID, search terms, or user ID depending on operation
+	MaxResults int    `json:"max_results,omitempty"`   // Max 1000, default 1000
+	Count      int    `json:"count,omitempty"`         // Number of results per request (max 1000)
+	NextCursor string `json:"next_cursor,omitempty"`   // Pagination cursor
+	StartTime  string `json:"start_time,omitempty"`    // ISO 8601 timestamp
+	EndTime    string `json:"end_time,omitempty"`      // ISO 8601 timestamp
 }
+
+// TwitterSearchRequest is an alias for TwitterRequest (backward compatible).
+type TwitterSearchRequest = TwitterRequest
+
+// TwitterSearchArguments is an alias for TwitterArguments (backward compatible).
+type TwitterSearchArguments = TwitterArguments
 
 // TwitterSearchResponse represents the response from the Twitter search API
 type TwitterSearchResponse struct {
